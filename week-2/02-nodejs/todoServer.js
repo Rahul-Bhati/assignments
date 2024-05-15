@@ -39,11 +39,116 @@
 
   Testing the server - run `npm run test-todoServer` command in terminal
  */
-  const express = require('express');
-  const bodyParser = require('body-parser');
-  
-  const app = express();
-  
-  app.use(bodyParser.json());
-  
-  module.exports = app;
+const express = require('express');
+const bodyParser = require('body-parser');
+const uuid = require("uuid");
+const fs = require('fs');
+
+const app = express();
+
+let todoDB = [
+  {
+    "id": 1,
+    "title": "this is todo 1",
+    "description": "todo msg 1"
+  },
+  {
+    "id": 2,
+    "title": "this is todo 2",
+    "description": "todo msg 2"
+  },
+  {
+    "id": 3,
+    "title": "this is todo 3",
+    "description": "todo msg 3"
+  },
+];
+app.use(bodyParser.json());
+
+app.get("/", (req, res) => {
+  console.log(uuid.v1());
+  res.send("<a href='/todos'>all todos</a>")
+})
+
+// retrive all totdo
+app.get("/todos", (req, res) => {
+  fs.readFile("./todos.json", "utf-8", (err, data) => {
+    if (err) res.status(400).json({ msg: err });
+    console.log(typeof JSON.parse(data))
+    res.status(200).json(JSON.parse(data));
+  })
+});
+
+// retrive specific totdo
+app.get("/todos/:id", (req, res) => {
+  const id = req.params.id;
+  fs.readFile("./todos.json", "utf-8", (err, data) => {
+    if (err) res.status(400).json({ msg: err });
+    console.log(typeof JSON.parse(data))
+    todoDB = JSON.parse(data);
+    res.status(200).json(todoDB.filter((ele) => {
+      if (ele.id == id) return ele;
+    }));
+  })
+
+});
+
+// add new todo
+app.post("/todos", (req, res) => {
+  req.body.id = uuid.v4();
+  // const { title, description } = req.body;
+  fs.readFile("./todos.json", "utf-8", (err, data) => {
+    if (err) res.status(400).json({ msg: err });
+    todoDB = JSON.parse(data);
+    todoDB.push(req.body);
+    console.log(JSON.stringify(todoDB))
+    fs.writeFile('./todos.json', JSON.stringify(todoDB), (err, data1) => {
+      if (err) return;
+      console.log(data1)
+      res.status(201).json(data1);
+    })
+  })
+});
+
+// update todo
+app.put("/todos/:id", (req, res) => {
+  const id = req.params.id;
+  const { title, description } = req.body;
+
+  fs.readFile("./todos.json", "utf-8", (err, data) => {
+    if (err) res.status(400).json({ msg: err });
+    todoDB = JSON.parse(data);
+    todoDB.map((ele) => {
+      if (ele.id == id) {
+        ele.title = title;
+        ele.description = description;
+      };
+    })
+    fs.writeFile('./todos.json', JSON.stringify(todoDB), (err, data1) => {
+      if (err) return;
+      console.log(data1)
+      res.status(200).json(data1);
+    })
+  })
+
+});
+
+// delete todo
+app.delete("/todos/:id", (req, res) => {
+  const id = req.params.id;
+  fs.readFile("./todos.json", "utf-8", (err, data) => {
+    if (err) res.status(400).json({ msg: err });
+    todoDB = JSON.parse(data);
+    todoDB = todoDB.filter((ele) => {
+      if (ele.id != id) return ele;
+    })
+    fs.writeFile('./todos.json', JSON.stringify(todoDB), (err, data1) => {
+      if (err) return;
+      console.log(data1)
+      res.status(200).json(data1);
+    })
+  })
+});
+
+module.exports = app;
+app.listen(3000);
